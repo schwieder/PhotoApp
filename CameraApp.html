@@ -1,0 +1,163 @@
+<br>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Geolocation App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        #camera {
+            width: 100%;
+            max-width: 500px;
+            background: black;
+            display: none;
+        }
+        #captured-image {
+            max-width: 100%;
+            display: none;
+        }
+        button {
+            margin: 10px;
+            padding: 10px;
+        }
+        #device-info, #location-info {
+            margin-top: 20px;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: left;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <h1>Camera Geolocation App</h1>
+    
+    <video id="camera" autoplay></video>
+    <img id="captured-image">
+    
+    <div>
+        <button id="capture-btn" style="display:none;">Capture Photo</button>
+        <button id="get-location-btn" style="display:none;">Get Location</button>
+    </div>
+    
+    <div id="device-info"></div>
+    <div id="location-info"></div>
+
+    <script>
+        const video = document.getElementById('camera');
+        const captureBtn = document.getElementById('capture-btn');
+        const getLocationBtn = document.getElementById('get-location-btn');
+        const capturedImage = document.getElementById('captured-image');
+        const locationInfo = document.getElementById('location-info');
+        const deviceInfo = document.getElementById('device-info');
+        let currentLocation = null;
+
+        function getDeviceInfo() {
+            const deviceDetails = {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                hardwareConcurrency: navigator.hardwareConcurrency || 'Unknown',
+                deviceMemory: navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Unknown',
+                screenResolution: `${screen.width}x${screen.height}`,
+                browserLanguage: navigator.language,
+                uniqueId: generateUniqueDeviceId()
+            };
+
+            deviceInfo.innerHTML = `
+                <strong>Device Information:</strong><br>
+                User Agent: ${deviceDetails.userAgent}<br>
+                Platform: ${deviceDetails.platform}<br>
+                CPU Cores: ${deviceDetails.hardwareConcurrency}<br>
+                Device Memory: ${deviceDetails.deviceMemory}<br>
+                Screen Resolution: ${deviceDetails.screenResolution}<br>
+                Browser Language: ${deviceDetails.browserLanguage}<br>
+                Unique Device ID: ${deviceDetails.uniqueId}
+            `;
+
+            return deviceDetails;
+        }
+
+        function generateUniqueDeviceId() {
+            // Create a unique identifier based on available device characteristics
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const txt = navigator.userAgent + 
+                        screen.width + 
+                        screen.height + 
+                        navigator.language + 
+                        (navigator.hardwareConcurrency || '');
+            
+            ctx.textBaseline = "top";
+            ctx.font = "14px 'Arial'";
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText(txt, 0, 20);
+            
+            return btoa(ctx.getImageData(0, 0, 100, 100).data.toString());
+        }
+
+        // Access camera
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = stream;
+                video.style.display = 'block';
+                captureBtn.style.display = 'inline-block';
+                getDeviceInfo();
+            } catch (err) {
+                alert('Camera access error: ' + err);
+            }
+        }
+
+        // Capture photo
+        captureBtn.addEventListener('click', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            capturedImage.src = canvas.toDataURL('image/jpeg');
+            capturedImage.style.display = 'block';
+            video.style.display = 'none';
+            
+            captureBtn.style.display = 'none';
+            getLocationBtn.style.display = 'inline-block';
+        });
+
+        // Get location
+        getLocationBtn.addEventListener('click', () => {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    currentLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+
+                    locationInfo.innerHTML = `
+                        <strong>Location:</strong><br>
+                        Latitude: ${currentLocation.latitude.toFixed(6)}<br>
+                        Longitude: ${currentLocation.longitude.toFixed(6)}<br>
+                        Accuracy: ${currentLocation.accuracy.toFixed(2)} meters
+                    `;
+                }, (err) => {
+                    locationInfo.textContent = 'Location error: ' + err.message;
+                });
+            } else {
+                locationInfo.textContent = 'Geolocation is not supported';
+            }
+        });
+
+        // Initialize
+        startCamera();
+    </script>
+</body>
+</html>
+
